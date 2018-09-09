@@ -40,6 +40,7 @@ payload
 			"feed": "https://www.reddit.com/r/Anarchy101/.rss",
 			"enable": true,
 			"tags": ["anarchy", "anarchy101", "reddit"]       #could be empty []
+			"html": false                                     #if feed provides content as html, title will be used
 		}
 	}
 }
@@ -55,5 +56,6 @@ payload
     "feed": "https://www.reddit.com/r/Anarchy101/.rss",           #change to update
     "enable": false,                                              #"enable": true to re-enable
     "tags": ["anarchy", "anarchy101", "reddit"]                   #could be empty []
+    "html": true                                                  #could be switched to true to federate html-formatted content
 }
 ```
