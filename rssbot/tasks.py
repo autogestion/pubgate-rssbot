@@ -3,7 +3,7 @@ import feedparser
 
 from pubgate.db.models import User, Outbox
 from pubgate.networking import fetch_text
-from pubgate.renders import Note
+from pubgate.activity import Note
 from pubgate.utils import make_label
 from pubgate.networking import deliver
 
@@ -62,7 +62,7 @@ def rssbot_task(app):
                                     "inReplyTo": "",
                                     "sensitive": False,
                                     "url": item['link'],
-                                    "content": body_tags,
+                                    "content": body,
                                     "tag": object_tags
                                 }
                             })
@@ -74,7 +74,7 @@ def rssbot_task(app):
                                 "meta": {"undo": False, "deleted": False},
                                 "feed_item_id": item["id"]
                             })
-                            recipients = await bot.followers_get()
+                            recipients = await activity.recipients()
 
                             # post_to_remote_inbox
                             asyncio.ensure_future(deliver(activity.render, recipients))
