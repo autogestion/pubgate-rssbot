@@ -2,23 +2,20 @@
 from sanic import response, Blueprint
 from sanic_openapi import doc
 
-from pubgate.api.v1.db.models import User
-from pubgate.api.v1.views.auth import auth_required
+from pubgate.db.models import User
+from pubgate.api.auth import token_check
 
 
 rssbot_bp = Blueprint('rssbot', url_prefix="rssbot")
 
 
-@rssbot_bp.route('/<user_id>', methods=['PATCH'])
+@rssbot_bp.route('/<user>', methods=['PATCH'])
 @doc.summary("Allow to disable/update rssbot")
-@auth_required
-async def rssbot_update(request, user_id):
-    user = await User.find_one(dict(username=user_id))
-    if not user:
-        return response.json({"zrada": "no such user"}, status=404)
+@token_check
+async def rssbot_update(request, user):
 
     await User.update_one(
-        {'username': user_id},
+        {'name': user.name},
         {'$set': {"details.rssbot": request.json}}
     )
 

@@ -1,11 +1,11 @@
 import asyncio
 import feedparser
 
-from pubgate.api.v1.db.models import User, Outbox
-from pubgate.api.v1.networking import fetch_text
-from pubgate.api.v1.renders import Activity
-from pubgate.api.v1.utils import make_label
-from pubgate.api.v1.networking import deliver
+from pubgate.db.models import User, Outbox
+from pubgate.networking import fetch_text
+from pubgate.renders import Activity
+from pubgate.utils import make_label
+from pubgate.networking import deliver
 
 
 def rssbot_task(app):
@@ -40,7 +40,7 @@ def rssbot_task(app):
                             tags = [f"#{x}" if not x.startswith("#") else x for x in bot["details"]["rssbot"]["tags"]]
                             body = f"{content} \n {item['link']} \n {' '.join(tags)} "
 
-                            activity = Activity(app.v1_path, bot.username, {
+                            activity = Activity(bot.name, {
                                 "type": "Create",
                                 "object": {
                                     "type": "Note",
@@ -54,8 +54,8 @@ def rssbot_task(app):
                                 }
                             })
                             await Outbox.insert_one({
-                                "_id": activity.obj_id,
-                                "user_id": bot.username,
+                                "_id": activity.id,
+                                "user_id": bot.name,
                                 "activity": activity.render,
                                 "label": make_label(activity.render),
                                 "meta": {"undo": False, "deleted": False},
@@ -67,7 +67,7 @@ def rssbot_task(app):
                             asyncio.ensure_future(deliver(activity.render, recipients))
 
                     await User.update_one(
-                        {'username': bot.username},
+                        {'name': bot.name},
                         {'$set': {"details.rssbot.feed_last_updated": feed_last_updated}}
                     )
 
