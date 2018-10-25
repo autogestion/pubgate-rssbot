@@ -3,7 +3,7 @@ import feedparser
 
 from pubgate.db.models import User, Outbox
 from pubgate.networking import fetch_text
-from pubgate.renders import Activity
+from pubgate.renders import Note
 from pubgate.utils import make_label
 from pubgate.networking import deliver
 
@@ -26,31 +26,44 @@ def rssbot_task(app):
                 else:
                     for item in parsed_feed["entries"]:
                         exists = await Outbox.find_one({
-                            "user_id": bot["username"],
+                            "user_id": bot.name,
                             "feed_item_id": item["id"]
                         })
                         if exists:
                             continue
                         else:
-                            content = item.get("content", None)
-                            if content and bot["details"]["rssbot"]["html"]:
-                                content = content[0]["value"]
-                            else: content = item['title']
+                            content = item.get("summary", None) or item.get("content", None)[0]["value"]
+                            if not (content and bot["details"]["rssbot"]["html"]):
+                                content = item['title']
 
-                            tags = [f"#{x}" if not x.startswith("#") else x for x in bot["details"]["rssbot"]["tags"]]
-                            body = f"{content} \n {item['link']} \n {' '.join(tags)} "
+                            body_tags = ""
+                            object_tags = []
+                            if bot["details"]["rssbot"]["tags"]:
+                                body_tags_list = []
+                                for tag in bot["details"]["rssbot"]["tags"]:
+                                    body_tags_list.append(
+                                        f"<a href='' rel='tag'>#{tag}</a>"
+                                    )
+                                    object_tags.append({
+                                        "href": "",
+                                        "name": f"#{tag}",
+                                        "type": "Hashtag"
+                                    })
 
-                            activity = Activity(bot.name, {
+                                body_tags = f"<br><br> {' '.join(body_tags_list)}"
+
+                            body = f"{content}{body_tags}"
+
+                            activity = Note(bot, {
                                 "type": "Create",
                                 "object": {
                                     "type": "Note",
                                     "summary": None,
                                     "inReplyTo": "",
-                                    "to": [
-                                        "https://www.w3.org/ns/activitystreams#Public"
-                                    ],
                                     "sensitive": False,
+                                    "url": item['link'],
                                     "content": body,
+                                    "tag": object_tags
                                 }
                             })
                             await Outbox.insert_one({
