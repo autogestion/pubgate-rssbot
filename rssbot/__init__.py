@@ -1,4 +1,4 @@
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 from rssbot.blueprints import rssbot_bp
 from rssbot.tasks import rssbot_task

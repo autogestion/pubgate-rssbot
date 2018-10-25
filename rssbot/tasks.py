@@ -62,7 +62,7 @@ def rssbot_task(app):
                                     "inReplyTo": "",
                                     "sensitive": False,
                                     "url": item['link'],
-                                    "content": body,
+                                    "content": body_tags,
                                     "tag": object_tags
                                 }
                             })
