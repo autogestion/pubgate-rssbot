@@ -78,6 +78,8 @@ def rssbot_task(app):
 
                             # post_to_remote_inbox
                             asyncio.ensure_future(deliver(activity.render, recipients))
+                            if app.config.POSTING_TIMEOUT:
+                                await asyncio.sleep(app.config.RSSBOT_TIMEOUT)
 
                     await User.update_one(
                         {'name': bot.name},
