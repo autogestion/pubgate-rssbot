@@ -32,15 +32,24 @@ payload
 {
 	"username": "user",
 	"password": "pass",
-	"actor_type": "Service",
 	"email": "admin@mail.com",                                     #optional
 	"invite": "xyz",                                               #required if register by invite enabled
+	"profile": {
+		"type": "Service",
+		"preferredUsername": "Anarchy101",
+		"summary": "For questions about the theory of anarchism, anarchist movements, opinions on certain situations or current events, or even socialist or communist theory in general.",
+	    "icon": {
+	        "type": "Image",
+	        "mediaType": "image/png",
+	        "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Anarchy-symbol.svg/1200px-Anarchy-symbol.svg.png"
+	    }		
+	}
 	"details": {
 		"rssbot": {
 			"feed": "https://www.reddit.com/r/Anarchy101/.rss",
 			"enable": true,
 			"tags": ["anarchy", "anarchy101", "reddit"]       #could be empty []
-			"html": false                                     #if feed provides content as html, title will be used
+			"html": true                                      #if false, title will be used
 		}
 	}
 }
@@ -53,9 +62,9 @@ payload
 payload
 ```
 {
-    "feed": "https://www.reddit.com/r/Anarchy101/.rss",           #change to update
+    "feed": "https://www.reddit.com/r/Anarchy101/.rss",           #change to update feed url
     "enable": false,                                              #"enable": true to re-enable
     "tags": ["anarchy", "anarchy101", "reddit"]                   #could be empty []
-    "html": true                                                  #could be switched to true to federate html-formatted content
+    "html": true                                                  
 }
 ```
