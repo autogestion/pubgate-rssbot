@@ -1,5 +1,7 @@
 import asyncio
+import aiohttp
 import feedparser
+from sanic.log import logger
 
 from pubgate.db.models import User, Outbox
 from pubgate.networking import fetch_text
@@ -15,7 +17,12 @@ def rssbot_task(app):
         while True:
             active_bots = await User.find(filter={"details.rssbot.enable": True})
             for bot in active_bots.objects:
-                feed = await fetch_text(bot["details"]["rssbot"]["feed"])
+                try:
+                    feed = await fetch_text(bot["details"]["rssbot"]["feed"])
+                except aiohttp.client_exceptions.ClientConnectorError as e:
+                    logger.info(e)
+                    continue
+
                 parsed_feed = feedparser.parse(feed)
                 last_updated = bot["details"]["rssbot"].get('feed_last_updated', None)
                 feed_last_updated = parsed_feed["feed"].get("updated", None)
