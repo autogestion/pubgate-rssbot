@@ -4,7 +4,6 @@ import feedparser
 from pubgate.db.models import User, Outbox
 from pubgate.networking import fetch_text
 from pubgate.activity import Note
-from pubgate.utils import make_label
 from pubgate.networking import deliver
 
 
@@ -66,14 +65,8 @@ def rssbot_task(app):
                                     "tag": object_tags
                                 }
                             })
-                            await Outbox.insert_one({
-                                "_id": activity.id,
-                                "user_id": bot.name,
-                                "activity": activity.render,
-                                "label": make_label(activity.render),
-                                "meta": {"undo": False, "deleted": False},
-                                "feed_item_id": item["id"]
-                            })
+                            await Outbox.save(bot, activity,
+                                              feed_item_id=item["id"])
                             recipients = await activity.recipients()
 
                             # post_to_remote_inbox
