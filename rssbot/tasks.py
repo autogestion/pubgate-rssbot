@@ -5,7 +5,7 @@ from sanic.log import logger
 
 from pubgate.db.models import User, Outbox
 from pubgate.networking import fetch_text
-from pubgate.activity import Note
+from pubgate.activity import Post
 from pubgate.networking import deliver
 
 
@@ -60,7 +60,7 @@ def rssbot_task(app):
 
                             body = f"{content}{body_tags}"
 
-                            activity = Note(bot, {
+                            activity = Post(bot, {
                                 "type": "Create",
                                 "object": {
                                     "type": "Note",
@@ -72,7 +72,7 @@ def rssbot_task(app):
                                     "tag": object_tags
                                 }
                             })
-                            await Outbox.save(bot, activity,
+                            await Outbox.save(activity,
                                               feed_item_id=item["id"])
                             recipients = await activity.recipients()
 
