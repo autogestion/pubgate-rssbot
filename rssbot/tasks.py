@@ -3,14 +3,14 @@ import aiohttp
 import feedparser
 from sanic.log import logger
 
-from pubgate.db.models import User, Outbox
-from pubgate.networking import fetch_text
-from pubgate.activity import Note
-from pubgate.networking import deliver
+from pubgate.db.models import Outbox
+from pubgate.db.user import User
+from pubgate.utils.networking import fetch_text
+from pubgate.activity import Create
 
 
 def rssbot_task(app):
-    print("rssbot_task register")
+    logger.info("rssbot_task registered")
 
     @app.listener("after_server_start")
     async def runbot(app, loop):
@@ -20,7 +20,7 @@ def rssbot_task(app):
                 try:
                     feed = await fetch_text(bot["details"]["rssbot"]["feed"])
                 except aiohttp.client_exceptions.ClientConnectorError as e:
-                    logger.info(e)
+                    logger.error(e)
                     continue
 
                 parsed_feed = feedparser.parse(feed)
@@ -60,8 +60,9 @@ def rssbot_task(app):
 
                             body = f"{content}{body_tags}"
 
-                            activity = Note(bot, {
+                            activity = Create(bot, {
                                 "type": "Create",
+                                "cc": [],
                                 "object": {
                                     "type": "Note",
                                     "summary": None,
@@ -72,12 +73,10 @@ def rssbot_task(app):
                                     "tag": object_tags
                                 }
                             })
-                            await Outbox.save(bot, activity,
-                                              feed_item_id=item["id"])
-                            recipients = await activity.recipients()
+                            await activity.save(feed_item_id=item["id"])
+                            await activity.deliver()
+                            logger.info(f"rss entry '{item['title']}' of {bot.name} federating")
 
-                            # post_to_remote_inbox
-                            asyncio.ensure_future(deliver(bot.key, activity.render, recipients))
                             if app.config.POSTING_TIMEOUT:
                                 await asyncio.sleep(app.config.RSSBOT_TIMEOUT)
 
