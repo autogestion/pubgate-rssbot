@@ -1,7 +1,7 @@
 ## PubGate RSS Bot
 Extension for [PubGate](https://github.com/autogestion/pubgate), federates rss-feeds
 
-Requires PubGate >= 0.2.1
+Requires PubGate >= 0.2.2
 ### Run
 
  - Install PubGate

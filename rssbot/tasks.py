@@ -3,10 +3,10 @@ import aiohttp
 import feedparser
 from sanic.log import logger
 
-from pubgate.db.models import User, Outbox
-from pubgate.networking import fetch_text
+from pubgate.db.models import Outbox
+from pubgate.db.user import User
+from pubgate.utils.networking import fetch_text, deliver
 from pubgate.activity import Post
-from pubgate.networking import deliver
 
 
 def rssbot_task(app):
