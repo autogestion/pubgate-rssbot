@@ -1,4 +1,6 @@
 import asyncio
+import re
+
 import aiohttp
 import feedparser
 from sanic.log import logger
@@ -30,31 +32,39 @@ def rssbot_task(app):
                 if last_updated and last_updated == feed_last_updated:
                     continue
                 else:
-                    for item in parsed_feed["entries"]:
+                    for entry in parsed_feed["entries"]:
                         exists = await Outbox.find_one({
                             "user_id": bot.name,
-                            "feed_item_id": item["id"]
+                            "feed_item_id": entry["id"]
                         })
                         if exists:
                             continue
                         else:
-                            content = item.get("summary", None) or item.get("content", None)[0]["value"]
-                            if not (content and bot["details"]["rssbot"]["html"]):
-                                content = item['title']
-
                             body_tags = ""
                             object_tags = []
+                            body_tags_list = []
+                            tag_list = []
+
+                            content = entry.get("summary", None) or entry.get("content", None)[0]["value"]
+                            if not (content and bot["details"]["rssbot"]["html"]):
+                                content = entry['title']
+
+                            find_tag_scheme = r"(?!<a[^>]*?>)(?P<tagged>#\w+)(?![^<]*?</a>)"
+                            find_tag_scheme = re.compile(find_tag_scheme)
+                            text_tags = re.findall(find_tag_scheme, content)
+                            if text_tags:
+                                for tag in text_tags:
+                                    addtag(tag, body_tags_list, object_tags)
+                                content = re.sub(find_tag_scheme, r"<a href='' rel='tag'>'\g<tagged>'</a>", content)
+
+                            if "tags" in entry:
+                                for tag in entry["tags"]:
+                                    tag_name = tag["term"]
+                                    addtag(tag_name, body_tags_list, object_tags, add_octothorpe=True)
+
                             if bot["details"]["rssbot"]["tags"]:
-                                body_tags_list = []
                                 for tag in bot["details"]["rssbot"]["tags"]:
-                                    body_tags_list.append(
-                                        f"<a href='' rel='tag'>#{tag}</a>"
-                                    )
-                                    object_tags.append({
-                                        "href": "",
-                                        "name": f"#{tag}",
-                                        "type": "Hashtag"
-                                    })
+                                    addtag(tag, body_tags_list, object_tags, add_octothorpe=True)
 
                                 body_tags = f"<br><br> {' '.join(body_tags_list)}"
 
@@ -68,14 +78,14 @@ def rssbot_task(app):
                                     "summary": None,
                                     "inReplyTo": "",
                                     "sensitive": False,
-                                    "url": item['link'],
+                                    "url": entry['link'],
                                     "content": body,
                                     "tag": object_tags
                                 }
                             })
-                            await activity.save(feed_item_id=item["id"])
+                            await activity.save(feed_item_id=entry["id"])
                             await activity.deliver()
-                            logger.info(f"rss entry '{item['title']}' of {bot.name} federating")
+                            logger.info(f"rss entry '{entry['title']}' of {bot.name} federating")
 
                             if app.config.POSTING_TIMEOUT:
                                 await asyncio.sleep(app.config.RSSBOT_TIMEOUT)
@@ -86,3 +96,23 @@ def rssbot_task(app):
                     )
 
             await asyncio.sleep(app.config.RSSBOT_TIMEOUT)
+
+    def addtag(tag_name, tag_text_list, tag_object, add_octothorpe=False):
+        if add_octothorpe:
+            name_pattern = f"#{tag_name}"
+        else:
+            name_pattern = f"{tag_name}"
+
+        tag_text_pattern = f"<a href='' rel='tag'>{name_pattern}</a>"
+        tag_object_pattern = {
+            "href": "",
+            "name": name_pattern,
+            "type": "Hashtag"
+        }
+
+        if tag_text_pattern not in tag_text_list:
+            tag_text_list.append(tag_text_pattern)
+
+        if tag_object_pattern not in tag_object:
+            tag_object.append(tag_object_pattern)
+
