@@ -1,4 +1,6 @@
 import asyncio
+import re
+
 import aiohttp
 import feedparser
 from sanic.log import logger
@@ -8,12 +10,14 @@ from pubgate.db.user import User
 from pubgate.utils.networking import fetch_text
 from pubgate.activity import Create
 
-
 def rssbot_task(app):
     logger.info("rssbot_task registered")
 
     @app.listener("after_server_start")
     async def runbot(app, loop):
+        find_tag_scheme = r"(?!<a[^>]*?>)(?P<tagged>#\w+)(?![^<]*?</a>)"
+        find_tag_scheme = re.compile(find_tag_scheme)
+
         while True:
             active_bots = await User.find(filter={"details.rssbot.enable": True})
             for bot in active_bots.objects:
@@ -30,35 +34,50 @@ def rssbot_task(app):
                 if last_updated and last_updated == feed_last_updated:
                     continue
                 else:
-                    for item in parsed_feed["entries"]:
+                    for entry in parsed_feed["entries"]:
                         exists = await Outbox.find_one({
                             "user_id": bot.name,
-                            "feed_item_id": item["id"]
+                            "feed_item_id": entry["id"]
                         })
                         if exists:
                             continue
                         else:
-                            content = item.get("summary", None) or item.get("content", None)[0]["value"]
+                            extra_tag_list = []
+                            footer_tags = ""
+
+                            content = entry.get("summary", None) or entry.get("content", None)[0]["value"]
                             if not (content and bot["details"]["rssbot"]["html"]):
-                                content = item['title']
+                                content = entry['title']
 
-                            body_tags = ""
-                            object_tags = []
+                            # collect tags marked as "labels" in the post
+                            if "tags" in entry:
+                                extra_tag_list = [tag["term"] for tag in entry["tags"]]
+
+                            # collect hardcoded tags from config
                             if bot["details"]["rssbot"]["tags"]:
-                                body_tags_list = []
-                                for tag in bot["details"]["rssbot"]["tags"]:
-                                    body_tags_list.append(
-                                        f"<a href='' rel='tag'>#{tag}</a>"
-                                    )
-                                    object_tags.append({
-                                        "href": "",
-                                        "name": f"#{tag}",
-                                        "type": "Hashtag"
-                                    })
+                                extra_tag_list.extend(bot["details"]["rssbot"]["tags"])
 
-                                body_tags = f"<br><br> {' '.join(body_tags_list)}"
+                            # Make extra text list clickable
+                            extra_tag_list = list(set(["#" + tag for tag in extra_tag_list]))
+                            extra_tag_list_clickable = [f"<a href='' rel='tag'>{tag}</a>" for tag in extra_tag_list]
 
-                            body = f"{content}{body_tags}"
+                            # collect tags from the post body
+                            intext_tag_list = re.findall(find_tag_scheme, content)
+                            if intext_tag_list:
+                                content = re.sub(find_tag_scheme, r"<a href='' rel='tag'>\g<tagged></a>", content)
+
+                            # Set tags as mastodon service info
+                            apub_tag_list = set(intext_tag_list + extra_tag_list)
+                            object_tags = [{
+                                            "href": "",
+                                            "name": tag,
+                                            "type": "Hashtag"
+                                           } for tag in apub_tag_list]
+
+                            if extra_tag_list_clickable:
+                                footer_tags = f"<br><br> {' '.join(extra_tag_list_clickable)}"
+
+                            body = f"{content}{footer_tags}"
 
                             activity = Create(bot, {
                                 "type": "Create",
@@ -68,14 +87,14 @@ def rssbot_task(app):
                                     "summary": None,
                                     "inReplyTo": "",
                                     "sensitive": False,
-                                    "url": item['link'],
+                                    "url": entry['link'],
                                     "content": body,
                                     "tag": object_tags
                                 }
                             })
-                            await activity.save(feed_item_id=item["id"])
+                            await activity.save(feed_item_id=entry["id"])
                             await activity.deliver()
-                            logger.info(f"rss entry '{item['title']}' of {bot.name} federating")
+                            logger.info(f"rss entry '{entry['title']}' of {bot.name} federating")
 
                             if app.config.POSTING_TIMEOUT:
                                 await asyncio.sleep(app.config.RSSBOT_TIMEOUT)
