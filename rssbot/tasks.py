@@ -105,23 +105,3 @@ def rssbot_task(app):
                     )
 
             await asyncio.sleep(app.config.RSSBOT_TIMEOUT)
-
-    def addtag(tag_name, tag_text_list, tag_object, add_octothorpe=False):
-        if add_octothorpe:
-            name_pattern = f"#{tag_name}"
-        else:
-            name_pattern = f"{tag_name}"
-
-        tag_text_pattern = f"<a href='' rel='tag'>{name_pattern}</a>"
-        tag_object_pattern = {
-            "href": "",
-            "name": name_pattern,
-            "type": "Hashtag"
-        }
-
-        if tag_text_pattern not in tag_text_list:
-            tag_text_list.append(tag_text_pattern)
-
-        if tag_object_pattern not in tag_object:
-            tag_object.append(tag_object_pattern)
-
