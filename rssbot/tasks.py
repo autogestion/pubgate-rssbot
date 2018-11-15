@@ -10,12 +10,14 @@ from pubgate.db.user import User
 from pubgate.utils.networking import fetch_text
 from pubgate.activity import Create
 
-
 def rssbot_task(app):
     logger.info("rssbot_task registered")
 
     @app.listener("after_server_start")
     async def runbot(app, loop):
+        find_tag_scheme = r"(?!<a[^>]*?>)(?P<tagged>#\w+)(?![^<]*?</a>)"
+        find_tag_scheme = re.compile(find_tag_scheme)
+
         while True:
             active_bots = await User.find(filter={"details.rssbot.enable": True})
             for bot in active_bots.objects:
@@ -40,35 +42,42 @@ def rssbot_task(app):
                         if exists:
                             continue
                         else:
-                            body_tags = ""
-                            object_tags = []
-                            body_tags_list = []
-                            tag_list = []
+                            extra_tag_list = []
+                            footer_tags = ""
 
                             content = entry.get("summary", None) or entry.get("content", None)[0]["value"]
                             if not (content and bot["details"]["rssbot"]["html"]):
                                 content = entry['title']
 
-                            find_tag_scheme = r"(?!<a[^>]*?>)(?P<tagged>#\w+)(?![^<]*?</a>)"
-                            find_tag_scheme = re.compile(find_tag_scheme)
-                            text_tags = re.findall(find_tag_scheme, content)
-                            if text_tags:
-                                for tag in text_tags:
-                                    addtag(tag, body_tags_list, object_tags)
-                                content = re.sub(find_tag_scheme, r"<a href='' rel='tag'>'\g<tagged>'</a>", content)
-
+                            # collect tags marked as "labels" in the post
                             if "tags" in entry:
-                                for tag in entry["tags"]:
-                                    tag_name = tag["term"]
-                                    addtag(tag_name, body_tags_list, object_tags, add_octothorpe=True)
+                                extra_tag_list = [tag["term"] for tag in entry["tags"]]
 
+                            # collect hardcoded tags from config
                             if bot["details"]["rssbot"]["tags"]:
-                                for tag in bot["details"]["rssbot"]["tags"]:
-                                    addtag(tag, body_tags_list, object_tags, add_octothorpe=True)
+                                extra_tag_list.extend(bot["details"]["rssbot"]["tags"])
 
-                                body_tags = f"<br><br> {' '.join(body_tags_list)}"
+                            # Make extra text list clickable
+                            extra_tag_list = list(set(["#" + tag for tag in extra_tag_list]))
+                            extra_tag_list_clickable = [f"<a href='' rel='tag'>{tag}</a>" for tag in extra_tag_list]
 
-                            body = f"{content}{body_tags}"
+                            # collect tags from the post body
+                            intext_tag_list = re.findall(find_tag_scheme, content)
+                            if intext_tag_list:
+                                content = re.sub(find_tag_scheme, r"<a href='' rel='tag'>\g<tagged></a>", content)
+
+                            # Set tags as mastodon service info
+                            apub_tag_list = set(intext_tag_list + extra_tag_list)
+                            object_tags = [{
+                                            "href": "",
+                                            "name": tag,
+                                            "type": "Hashtag"
+                                           } for tag in apub_tag_list]
+
+                            if extra_tag_list_clickable:
+                                footer_tags = f"<br><br> {' '.join(extra_tag_list_clickable)}"
+
+                            body = f"{content}{footer_tags}"
 
                             activity = Create(bot, {
                                 "type": "Create",
