@@ -44,6 +44,7 @@ def rssbot_task(app):
                         else:
                             extra_tag_list = []
                             footer_tags = ""
+                            attachment_object = []
 
                             content = entry.get("summary", None) or entry.get("content", None)[0]["value"]
                             if not (content and bot["details"]["rssbot"]["html"]):
@@ -77,6 +78,14 @@ def rssbot_task(app):
                             if extra_tag_list_clickable:
                                 footer_tags = f"<br><br> {' '.join(extra_tag_list_clickable)}"
 
+                            # move images to attachments
+                            if app.config.MOVE_IMG_TO_ATTACHMENT:
+                                post_details = {"content": content,
+                                                "attachment_object": attachment_object}
+                                move_image_to_attachment(post_details)
+                                content = post_details["content"]
+                                attachment_object = post_details["attachment_object"]
+
                             body = f"{content}{footer_tags}"
 
                             activity = Create(bot, {
@@ -89,6 +98,7 @@ def rssbot_task(app):
                                     "sensitive": False,
                                     "url": entry['link'],
                                     "content": body,
+                                    "attachment": attachment_object,
                                     "tag": object_tags
                                 }
                             })
@@ -105,3 +115,24 @@ def rssbot_task(app):
                     )
 
             await asyncio.sleep(app.config.RSSBOT_TIMEOUT)
+
+    def move_image_to_attachment(post_details):
+        find_image_scheme = r'(?P<image_construction><img\b[^>]*src="(?P<image_url>[^"]+?)"[^>]*?\/>)'
+        find_image_scheme = re.compile(find_image_scheme)
+        # find_link_around_image_scheme = r"<a\b[^>]*>(.*?)<img\b(.*?)<\/a>"
+        # find_link_around_image_scheme = re.compile(find_tag_scheme)
+
+        # collect images from the post body
+        intext_image_list = re.findall(find_image_scheme, post_details["content"])
+
+        # delete images form text
+        if intext_image_list:
+            post_details["content"] = re.sub(find_image_scheme, r"", post_details["content"])
+
+        # insert link to image into attachments
+            post_details["attachment_object"] += [{
+            "type": "Document",
+            "mediaType": "image/jpeg",
+            "url": image[1],
+            "name": "null"
+        } for image in intext_image_list]
