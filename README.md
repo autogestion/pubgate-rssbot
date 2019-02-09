@@ -1,7 +1,7 @@
 ## PubGate RSS Bot
 Extension for [PubGate](https://github.com/autogestion/pubgate), federates rss-feeds
 
-Requires PubGate >= 0.2.4
+Requires PubGate >= 0.2.8
 ### Run
 
  - Install PubGate
@@ -14,6 +14,8 @@ Requires PubGate >= 0.2.4
 ```
 EXTENSIONS = [..., "rssbot"]
 RSSBOT_TIMEOUT = 3600
+POSTING_TIMEOUT = False
+MOVE_IMG_TO_ATTACHMENT = True
 ```
  - run 
 ```
