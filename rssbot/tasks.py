@@ -54,7 +54,10 @@ async def runbot(app, loop):
                             content = move_image_to_attachment(content, attachment_object)
 
                         body = f"{content}{footer_tags}"
-                        published = time.strftime('%Y-%m-%dT%H:%M:%SZ', entry["published_parsed"])
+
+                        published = time.strftime('%Y-%m-%dT%H:%M:%SZ',
+                                                  entry.get("published_parsed", None)
+                                                  or entry.get("updated_parsed"))
 
                         activity = Create(bot, {
                             "type": "Create",
