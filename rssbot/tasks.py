@@ -4,19 +4,16 @@ import time
 import aiohttp
 import feedparser
 from sanic.log import logger
-from sanic import Blueprint
 
 from pubgate.db import Outbox, User
 from pubgate.utils.networking import fetch_text
 from pubgate.activity import Create
+from pubgate.contrib.parsers import process_tags
 
-from rssbot.utils import process_tags, move_image_to_attachment
-
-bot_tasks = Blueprint("bot_tasks")
+from rssbot.utils import move_image_to_attachment
 
 
-@bot_tasks.listener("after_server_start")
-async def runbot(app, loop):
+async def run_rss_bot(app):
     while True:
         active_bots = await User.find(filter={"details.rssbot.enable": True})
         for bot in active_bots.objects:
@@ -46,7 +43,15 @@ async def runbot(app, loop):
                             content = entry['title']
 
                         # process tags
-                        content, footer_tags, object_tags = process_tags(entry, content, bot)
+                        extra_tag_list = []
+                        # collect tags marked as "labels" in the post
+                        if "tags" in entry:
+                            extra_tag_list = [tag["term"] for tag in entry["tags"]]
+
+                        # collect hardcoded tags from config
+                        if bot["details"]["rssbot"]["tags"]:
+                            extra_tag_list.extend(bot["details"]["rssbot"]["tags"])
+                        content, footer_tags, object_tags = process_tags(extra_tag_list, content)
 
                         # move images to attachments
                         attachment_object = []

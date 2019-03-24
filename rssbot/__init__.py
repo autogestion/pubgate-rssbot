@@ -1,5 +1,6 @@
-__version__ = "0.1.14"
+__version__ = "0.1.15"
 
-from rssbot.tasks import bot_tasks
+from rssbot.tasks import run_rss_bot
 
-pg_blueprints = [bot_tasks]
+pg_blueprints = []
+pg_tasks = [run_rss_bot]
