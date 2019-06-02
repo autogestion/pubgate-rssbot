@@ -1,7 +1,7 @@
 ## PubGate RSS Bot
 Extension for [PubGate](https://github.com/autogestion/pubgate), federates rss-feeds
 
-Requires PubGate >= 0.2.8
+Requires PubGate >= 0.2.9
 ### Run
 
  - Install PubGate
@@ -33,28 +33,28 @@ python run_api.py
 payload
 ```
 {
-	"username": "user",
-	"password": "pass",
-	"email": "admin@mail.com",                                     #optional
-	"invite": "xyz",                                               #required if register by invite enabled
-	"profile": {
-		"type": "Service",
-		"preferredUsername": "Anarchy101",
-		"summary": "For questions about the theory of anarchism, anarchist movements, opinions on certain situations or current events, or even socialist or communist theory in general.",
-	    "icon": {
-	        "type": "Image",
-	        "mediaType": "image/png",
-	        "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Anarchy-symbol.svg/1200px-Anarchy-symbol.svg.png"
-	    }		
-	}
-	"details": {
-		"rssbot": {
-			"feed": "https://www.reddit.com/r/Anarchy101/.rss",
-			"enable": true,
-			"tags": ["anarchy", "anarchy101", "reddit"]       #could be empty []
-			"html": true                                      #if false, title will be used
-		}
-	}
+    "username": "user",
+    "password": "pass",
+    "email": "admin@mail.com",                                          #optional
+    "invite": "xyz",                                                    #required if register by invite enabled
+    "profile": {
+        "type": "Service",
+        "preferredUsername": "Anarchy101",
+        "summary": "For questions about the theory of anarchism, anarchist movements, opinions on certain situations or current events, or even socialist or communist theory in general.",
+        "icon": {
+            "type": "Image",
+            "mediaType": "image/png",
+            "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Anarchy-symbol.svg/1200px-Anarchy-symbol.svg.png"
+        }    
+    },
+    "details": {
+        "rssbot": {
+            "feed": "https://www.reddit.com/r/Anarchy101/.rss",
+            "enable": true,
+            "tags": ["anarchy", "anarchy101", "reddit"]                 #could be empty []
+            "html": true                                                #if false, title will be used
+        }   
+    }
 }
 ```
 
@@ -67,9 +67,9 @@ payload
 {
     "details": {
         "rssbot": {
-            "feed": "https://www.reddit.com/r/Anarchy101/.rss",           #change to update feed url
-            "enable": false,                                              #"enable": true to re-enable
-            "tags": ["anarchy", "anarchy101", "reddit"]                   #could be empty []
+            "feed": "https://www.reddit.com/r/Anarchy101/.rss",         #change to update feed url
+            "enable": false,                                            #"enable": true to re-enable
+            "tags": ["anarchy", "anarchy101", "reddit"]                 #could be empty []
             "html": true                                                  
         }
     }
