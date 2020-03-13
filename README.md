@@ -69,7 +69,7 @@ payload
         "rssbot": {
             "feed": "https://www.reddit.com/r/Anarchy101/.rss",         #change to update feed url
             "enable": false,                                            #"enable": true to re-enable
-            "tags": ["anarchy", "anarchy101", "reddit"]                 #could be empty []
+            "tags": ["anarchy", "anarchy101", "reddit"],                 #could be empty []
             "html": true                                                  
         }
     }
